@@ -131,6 +131,7 @@ router.get("/getMe", protect, async(req, res, next)=>{
     
 });
 
+// pagination, sorting and searching
 router.get("/getAll", protect, restrictTo('manager'), async(req, res, next)=>{
     const features = new APIFeatures(User.find(),req.query).filter().sort().limitFields().paginate();
     const users = await features.query;
