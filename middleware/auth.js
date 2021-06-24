@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const config = require("config");
+const { promisify } = require("util");
 const User = require("../models/userModel");
 
 
@@ -16,9 +16,8 @@ exports.protect = async (req, res, next ) =>{
             .json({msg: "You are not logged in!"});
         }
 
-        const decoded = await jwt.verify(token, config.get("jwtSecret"));
-     
-        const currentUser = await User.findById(decoded.user.id);
+        const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+        const currentUser = await User.findById(decoded.id);
         if(!currentUser){
             return res
             .status(401)

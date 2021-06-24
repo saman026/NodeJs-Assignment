@@ -2,9 +2,9 @@
   "name": "assignment",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "author": "saman",
   "license": "ISC",
@@ -16,5 +16,12 @@
     "express-validator": "^6.12.0",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.12.14"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
+    "jest": "^27.0.5",
+    "mocha": "^9.0.1",
+    "supertest": "^6.1.3"
   }
 }
