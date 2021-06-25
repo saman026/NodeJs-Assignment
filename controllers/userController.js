@@ -3,12 +3,13 @@ const { validationResult } = require("express-validator");
 const generateToken = require("../utils/generateToken");
 const User = require('../models/userModel');
 const APIFeatures = require('../utils/apifeature');
+const AppError = require('../utils/appError');
 
-exports.register = async(req, res) => {
+exports.register = async(req, res, next) => {
     const errors = validationResult(req);
 
     if(!errors.isEmpty()){
-        return res.status(400).json({errors: errors.array()});
+        return next(new AppError(errors.array(), 400));
     }
 
     const {name, email, password, role} = req.body;
@@ -16,9 +17,7 @@ exports.register = async(req, res) => {
         let user = await User.findOne({ email});
 
         if(user){
-            return res
-            .status(400)
-            .json({ errors: [{msg: "User already exists"}]});
+            return next(new AppError("User already exists!", 400));
         }
 
         user = new User({
@@ -35,31 +34,27 @@ exports.register = async(req, res) => {
         return res.status(201).json({ msg: "User registered successfully!" });
 
     }catch(err){
-        res.status(500).send("Server error");
+        return next(new AppError("Something went wrong. Please try again!", 400));
     }
 }
 
-exports.login = async (req, res) => {
-    console.log("testing");
+exports.login = async (req, res, next) => {
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {    
-        return res.status(400).json({ erros: errors.array() }); 
+        return next(new AppError(errors.array(), 400));
     }
     
     try {
         const { email, password } = req.body;
         let user = await User.findOne({ email });
         if(!user) {
-            return res  
-                .status(400)
-                .json({ msg: "Email does not exist!" }); 
+            return next(new AppError("Email does not exist!", 400));
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {     
-            return res
-                .status(400)
-                .json({ msg: "Inavlid credentials!" });   
+            return next(new AppError("Invalid credentials", 400));
         }
         const payload = {      
                 id: user._id,
@@ -67,65 +62,64 @@ exports.login = async (req, res) => {
 
         const token = generateToken(payload.id, 200, res);
         if (!token)
-            return res.status(400).json({ msg: "Error in token generation" });
+            return next(new AppError("Error in token generation", 400));
         else
-            return res.status(200).json({ token })        
+            return res
+                .status(200)
+                .json({ token });
         
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ msg: "Somthing went wrong! Please try again!" });
+        return next(new AppError("Somthing went wrong! Please try again!", 500)) 
     }
 }
 
-exports.update = async(req, res) => {
+exports.update = async(req, res, next) => {
     const errors = validationResult(req);
 
     if(!errors.isEmpty()){
-        return res.status(400).json({erros: errors.array()});
+        return next(new AppError(errors.array(), 400));
     }
 
     try{
         const user = await User.findOne({_id: req.user.id});
         if(!user){
-        return res.status(404).json({msg: "No User found!"});
+        return next(new AppError("No user found", 404));
         };
-        await User.findOneAndUpdate({_id: user._id},
-            {
-                name: req.body.name,
-            });
-        return res.status(200).json({msg:"User updated!"});
-    }catch(err){
-        res.status(500).send("Server Error");
+        await User.findOneAndUpdate({ _id: user._id }, { name: req.body.name, });
+        return res.status(200).json({ msg: "User updated!" });
+        
+    } catch (err) {
+        return next(new AppError("Something went wrong. Please try again!", 500));
     }
 
 }
 
-exports.delete = async(req, res)=>{
+exports.delete = async(req, res, next)=>{
 
     try{
         const user = User.findOne({_id: req.user.id});
 
         if(!user)
-            return res.status(404).json({msg: "No user found!"});
+            return next(new AppError("No User found!", 404));
 
         await User.findOneAndDelete({_id: req.user.id});
-        return res.status(200).json({msg:"User deleted!"});
+        return res.status(200).json({ msg: "User deleted!" });
+        
     }catch(err){
-        res.status(500).send("Server Error");
+        return next(new AppError("Something went wrong. Please try again!", 500));
     }
 
 }
 
 exports.getID = async(req, res)=>{
     try {
-        console.log(req.params.id, "idddd");
-        const user = await User.findOne({ _id: req.params.id });
+        const user = await User.findOne({ _id: req.user._id });
         if(!user)
-            return res.status(404).json({ msg: "No User found!" });
+            return next(new AppError("No User Found!", 404));
 
-        return res.status(200).json({ user: { data: user } }); 
+        return res.status(200).json({ user }); 
     } catch (err) {
-        res.status(500).json({ msg: "Something went wrong!" })
+        return next(new AppError("Something went wrong. Please try again!", 500));
         
     }
 }
@@ -146,12 +140,12 @@ exports.updateUser = async(req, res, next) =>{
     const errors = validationResult(req);
 
     if(!errors.isEmpty())
-        return res.status(400).json({errors: errors.array()});
+        return next(new AppError(errors.array(), 400));
     try{
         const user = await User.findOne({_id: req.params.id});
         
         if(!user){
-            return res.status(404).json({msg: "No User found with that ID!"});
+            return next(new AppError("No User found with that ID", 404));
         }
 
         if(user.role !=='manager' && user._id != req.user.id){
@@ -165,13 +159,11 @@ exports.updateUser = async(req, res, next) =>{
                 .json({msg:"User updated successfully!"});
             
         }else{
-            return res
-            .status(400)
-            .json({msg: "Cannot Update!"});
+            return next(new AppError("Cannot update!", 400));
         }
 
     }catch(err){
-        res.status(500).json({msg: 'Server Error'});
+        return next(new AppError("Something went wrong. Please try again!", 500));
     }
 }
 
@@ -181,7 +173,7 @@ exports.deleteUser = async(req, res, next)=>{
         const user = await User.findOne({_id: req.params.id});
         
         if(!user){
-            return res.status(404).json({msg: "No User found with that ID!"});
+            return next(new AppError("No User found with that ID!", 404));
         }
         if(user.role !=='manager' && user._id != req.user.id){
             await User.findOneAndDelete({_id: user._id});
@@ -190,9 +182,9 @@ exports.deleteUser = async(req, res, next)=>{
                 .json({msg:"User deleted successfully!"});
             
         }else{
-            return res.status(400).json({msg: "Cannot be deleted!"})
+            return next(new AppError("Cannot delete!", 400));
         }
     }catch(err){
-        res.status(500).send("Server Error");
+        return next(new AppError("Something went wrong. Please try again!", 500));
     }
 }

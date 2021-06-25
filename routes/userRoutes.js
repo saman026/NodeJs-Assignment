@@ -34,7 +34,7 @@ router.put("/update", protect,
 );
 
 router.delete("/delete", protect, userController.delete);
-router.get("/get/:id", protect, userController.getID);
+router.get("/getMe", protect, userController.getID);
 router.get("/get", protect, restrictTo('manager'), userController.get);
 
 router.put("/update/:id", protect, restrictTo('manager'), 

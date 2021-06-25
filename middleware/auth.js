@@ -34,7 +34,7 @@ exports.protect = async (req, res, next ) =>{
 }
 
 exports.restrictTo = (...role) => {
-    
+
     return async (req, res, next) => {
         
         const user_role = await User.findById({_id: req.user.id});
